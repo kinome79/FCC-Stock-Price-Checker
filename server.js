@@ -12,7 +12,7 @@ const app = express();
 
 // Configure content security policy: script and CSS from self only
 app.use(helmet.contentSecurityPolicy({directives:{
-  defaultSrc: "'self'", scriptSrc: "'self'"
+  defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'"]
 }}))
 
 app.use('/public', express.static(process.cwd() + '/public'));
