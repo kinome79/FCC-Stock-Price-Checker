@@ -121,7 +121,9 @@ suite('Functional Tests', function() {
         });
     });
 
+    // Required to resolve a timeout on Replit resulting from a bug regarding the .end call
     after(function() {
+        apifuncs.clearLikes('GOOG','MSFT', '::ffff:127.0.0.1');
         chai.request(server).get('/api')
     });
 });
