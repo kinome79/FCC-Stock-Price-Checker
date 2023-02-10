@@ -14,7 +14,7 @@ suite('Functional Tests', function() {
         // Clear likes from local IP so like functionality can be tested
         apifuncs.clearLikes('GOOG','MSFT', '::ffff:127.0.0.1');
         done();
-    })
+    });
 
     suite('Single Stock Tests', function() {
         
@@ -31,7 +31,7 @@ suite('Functional Tests', function() {
                 assert.isNumber(res.body.stockData.likes, "stockData.likes should be a number");
                 numberLikes = res.body.stockData.likes;
                 done();
-            })
+            });
 
         });
 
@@ -49,7 +49,7 @@ suite('Functional Tests', function() {
                 assert.equal(res.body.stockData.likes - numberLikes, 1, "Likes on stock should have increased by 1");
                 numberLikes = res.body.stockData.likes;
                 done();
-            })
+            });
         });
 
         test("Viewing the same stock and liking it again: GET request to /api/stock-prices/", function(done) {
@@ -66,7 +66,7 @@ suite('Functional Tests', function() {
                 assert.equal(res.body.stockData.likes,numberLikes, "Likes on stock should not have changed from previously");
                 numberLikes = res.body.stockData.likes;
                 done();
-            })
+            });
         });
     });
 
@@ -116,9 +116,12 @@ suite('Functional Tests', function() {
                 chai.request(server).get('/api/stock-prices?stock=MSFT').end((err2,res2) => {
                     assert.equal(res2.body.stockData.likes + numRelLikes - numberLikes, 1, "Likes on stock 2 should have increased by 1");
                     done();
-                })
-            })
+                });
+            });
         });
     });
 
+    after(function() {
+        chai.request(server).get('/api')
+    });
 });
