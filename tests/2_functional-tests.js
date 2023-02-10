@@ -2,12 +2,19 @@ const chaiHttp = require('chai-http');
 const chai = require('chai');
 const assert = chai.assert;
 const server = require('../server');
+const apifuncs = require('../routes/api.js')
 
 chai.use(chaiHttp);
 
 suite('Functional Tests', function() {
     this.timeout(5000);
     let numberLikes = 0;
+
+    suiteSetup ( function(done) {
+        // Clear likes from local IP so like functionality can be tested
+        apifuncs.clearLikes('GOOG','MSFT', '::ffff:127.0.0.1');
+        done();
+    })
 
     suite('Single Stock Tests', function() {
         

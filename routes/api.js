@@ -30,34 +30,38 @@ function getStockData(item) {
       if (stockreq.status >= 200 && stockreq.status < 300) {
         res(JSON.parse(stockreq.responseText));
       } else {
-        rej(stockreq.status);
+        res(stockreq.status + " - API didn't respond.");
       }
     }
     stockreq.send()
   });
 }
 
-// Export function for api routing -------------------------------------------------
-module.exports = function (app) {
-  
-  /* // Function to clear likes from two stocks - meant to clean values before tests are run, but not implemented
-  async function clearLikes(stock1, stock2, ip) {
-    const hash = hashIP(ip);
+  // Function to clear likes from two stocks - meant to clean values before tests are run, but not implemented
+async function clearLikes(stock1, stock2, ip) {
+  const hash = hashIP(ip);
+  console.log("\nClearing likes from test stocks for local IP...\n");
 
-    //get stocks like database entry if exists
-    const stockLikes1 = await Stock.findOne({stock: stock1});
-    const stockLikes2 = await Stock.findOne({stock: stock2});
+  //get stocks like database entry if exists
+  const stockLikes1 = await Stock.findOne({stock: stock1});
+  const stockLikes2 = await Stock.findOne({stock: stock2});
 
+  if (stockLikes1 && stockLikes2) {
     stockLikes1.likes = stockLikes1.likes.filter( item => item != hash );
     stockLikes2.likes = stockLikes2.likes.filter( item => item != hash );
-
     await stockLikes1.save();
     await stockLikes2.save();
-  }*/
+  }
 
+}
+
+// Export function for api routing -------------------------------------------------
+module.exports = {routes: function (app) {
+  
   // Handle get requests, async callback function to respond with desired data
   app.route('/api/stock-prices')
     .get( async function (req, res) {
+
       // Get supplied query variables
       let {stock, like} = req.query;
       // If stock is supplied, generate response
@@ -71,42 +75,52 @@ module.exports = function (app) {
           return res.json({error: "Maximum of two stocks can be accepted"})
         }
         
-        // For each stock, get their price from API, and their likes from database, push to results
-        for await (const item of stock) {
-                    
-          //fetch API price for stock
-          const apiData = await getStockData(item);
-          //Originally attempted fetch, but wasn't implemented in NodeJS without switching to modulejs
-          //const apiData = await fetch(`${API_URL}${item}/quote`).then(res => res.json());
-          //const apiData = await apiDataRes.json();
-          
-          //build response object for stock
-          let mystock = {stock: apiData.symbol, price: apiData.latestPrice};
+        try {
 
-          //get stocks like database entry if exists
-          let stockLikes = await Stock.findOne({stock: mystock.stock});
-
-          //if database entry doesn't exist, create it
-          if (!stockLikes) {
-            stockLikes = new Stock({stock: mystock.stock, likes: []});
-            stockLikes = await stockLikes.save();
-          }
-
-          //if 'like=true' was specified, push hashed IP to database
-          if (like) {
-            // hash the ip address with particular salt
-            const myIP = hashIP(req.ip)
+          // For each stock, get their price from API, and their likes from database, push to results
+          for await (const item of stock) {
+                      
+            //fetch API price for stock
+            const apiData = await getStockData(item);
+            //Originally attempted fetch, but wasn't implemented in NodeJS without switching to modulejs
+            //const apiData = await fetch(`${API_URL}${item}/quote`).then(res => res.json());
+            //const apiData = await apiDataRes.json();
             
-            // if IP isn't already in database entry, push it and save document
-            if (!stockLikes.likes.includes(myIP)) {
-              stockLikes.likes.push(myIP);
-              stockLikes.save();
-            }
-          }
+            //build response object for stock
+            let mystock = {stock: apiData.symbol, price: apiData.latestPrice};
 
-          // add 'likes' to the result stock object and push to array
-          mystock['likes'] = stockLikes.likes.length;
-          results.push(mystock)
+            if (mystock.stock) {
+              //get stocks like database entry if exists
+              let stockLikes = await Stock.findOne({stock: mystock.stock});
+
+              //if database entry doesn't exist, create it
+              if (!stockLikes) {
+                stockLikes = new Stock({stock: mystock.stock, likes: []});
+                stockLikes = await stockLikes.save();
+              }
+
+              //if 'like=true' was specified, push hashed IP to database
+              if (like) {
+                // hash the ip address with particular salt
+                const myIP = hashIP(req.ip)
+                
+                // if IP isn't already in database entry, push it and save document
+                if (!stockLikes.likes.includes(myIP)) {
+                  stockLikes.likes.push(myIP);
+                  stockLikes.save();
+                }
+              }
+
+              // add 'likes' to the result stock object and push to array
+              mystock['likes'] = stockLikes.likes.length;
+            } else {
+              mystock = {stock: item, price: "Not Found", likes: 0}
+            }
+            
+            results.push(mystock)
+          }
+        } catch (error) {
+          console.log("Error: " + error);
         }
 
         // if more than one stock, calculate rel_likes and return results array
@@ -129,5 +143,7 @@ module.exports = function (app) {
         return res.json({error: "You must supply at least one stock for retrieval."})
       }
 
+      // catch all return
+      return res.json({error: "Unknown error occurred"})
     });
-};
+}, clearLikes};
